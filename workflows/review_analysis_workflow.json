@@ -1,0 +1,342 @@
+{
+  "name": "Marketplace Review Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SERVICE_URL || 'http://service:8000' }}/health",
+        "options": {}
+      },
+      "id": "health-check",
+      "name": "Check Service Health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "operation": "equals",
+              "value2": "healthy"
+            }
+          ]
+        }
+      },
+      "id": "is-healthy",
+      "name": "Is Service Healthy?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "jsonToCsv",
+        "options": {}
+      },
+      "id": "read-csv",
+      "name": "Read Reviews CSV",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1,
+      "position": [
+        900,
+        200
+      ],
+      "notes": "Alternative: Use 'Google Sheets' node to read from Google Sheets instead of local CSV"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "batch-reviews",
+              "name": "reviews",
+              "value": "={{ $json }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prepare-batch",
+      "name": "Prepare Review Batch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [
+        1120,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SERVICE_URL || 'http://service:8000' }}/analyze",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ reviews: $json.reviews }) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 20
+            }
+          },
+          "retry": {
+            "retry": {
+              "maxRetries": 3,
+              "retryInterval": 2000
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "analyze-reviews",
+      "name": "Analyze Reviews (with retries)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1340,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combineBySql",
+        "query": "SELECT \n  summary->>'total_reviews' as total_reviews,\n  summary->>'sentiment_distribution' as sentiment_dist,\n  summary->>'priority_distribution' as priority_dist,\n  summary->>'top_topics' as top_topics,\n  summary->>'top_complaints' as top_complaints\nFROM input"
+      },
+      "id": "aggregate-results",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.all();\n\nlet totalReviews = 0;\nconst sentimentCounts = { positive: 0, neutral: 0, negative: 0 };\nconst priorityCounts = { low: 0, medium: 0, high: 0, critical: 0 };\nconst allTopics = [];\nconst allComplaints = [];\n\nfor (const item of results) {\n  const data = item.json;\n  totalReviews += data.summary.total_reviews;\n  \n  // Aggregate sentiment\n  for (const [sentiment, count] of Object.entries(data.summary.sentiment_distribution)) {\n    sentimentCounts[sentiment] = (sentimentCounts[sentiment] || 0) + count;\n  }\n  \n  // Aggregate priority\n  for (const [priority, count] of Object.entries(data.summary.priority_distribution)) {\n    priorityCounts[priority] = (priorityCounts[priority] || 0) + count;\n  }\n  \n  // Collect topics and complaints\n  allTopics.push(...data.summary.top_topics);\n  allComplaints.push(...data.summary.top_complaints);\n}\n\n// Count topic frequencies\nconst topicFreq = {};\nfor (const topic of allTopics) {\n  topicFreq[topic] = (topicFreq[topic] || 0) + 1;\n}\nconst topTopics = Object.entries(topicFreq)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, 5)\n  .map(([topic]) => topic);\n\n// Count complaint frequencies\nconst complaintFreq = {};\nfor (const complaint of allComplaints) {\n  complaintFreq[complaint] = (complaintFreq[complaint] || 0) + 1;\n}\nconst topComplaints = Object.entries(complaintFreq)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, 5)\n  .map(([complaint]) => complaint);\n\nconst negativePct = ((sentimentCounts.negative / totalReviews) * 100).toFixed(1);\nconst criticalCount = priorityCounts.critical || 0;\n\nreturn [\n  {\n    json: {\n      totalReviews,\n      sentimentCounts,\n      priorityCounts,\n      topTopics,\n      topComplaints,\n      negativePct,\n      criticalCount\n    }\n  }\n];"
+      },
+      "id": "process-summary",
+      "name": "Process Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "telegram-message",
+              "name": "message",
+              "value": "=📊 **Анализ отзывов завершен**\n\n📈 **Всего отзывов:** {{ $json.totalReviews }}\n\n😊 **Настроения:**\n• Позитивные: {{ $json.sentimentCounts.positive }}\n• Нейтральные: {{ $json.sentimentCounts.neutral }}\n• Негативные: {{ $json.sentimentCounts.negative }} ({{ $json.negativePct }}%)\n\n⚠️ **Приоритеты:**\n• Критичные: {{ $json.criticalCount }}\n• Высокие: {{ $json.priorityCounts.high || 0 }}\n• Средние: {{ $json.priorityCounts.medium || 0 }}\n• Низкие: {{ $json.priorityCounts.low || 0 }}\n\n🏷️ **Топ темы:**\n{{ $json.topTopics.map((t, i) => `${i+1}. ${t}`).join('\\n') }}\n\n⚠️ **Частые жалобы:**\n{{ $json.topComplaints.slice(0, 3).map((c, i) => `${i+1}. ${c}`).join('\\n') || 'Нет жалоб' }}\n\n{{ $now.format('DD.MM.YYYY HH:mm') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-digest",
+      "name": "Format Telegram Digest",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [
+        2000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-telegram",
+      "name": "Send Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        2220,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=⚠️ **Ошибка анализа отзывов**\n\nСервис недоступен или не отвечает.\n\nПожалуйста, проверьте:\n1. Запущен ли сервис анализа\n2. Доступен ли endpoint {{ $env.SERVICE_URL || 'http://service:8000' }}\n\n{{ $now.format('DD.MM.YYYY HH:mm') }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-error",
+      "name": "Send Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Daily": {
+      "main": [
+        [
+          {
+            "node": "Check Service Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Service Health": {
+      "main": [
+        [
+          {
+            "node": "Is Service Healthy?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Service Healthy?": {
+      "main": [
+        [
+          {
+            "node": "Read Reviews CSV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Reviews CSV": {
+      "main": [
+        [
+          {
+            "node": "Prepare Review Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Review Batch": {
+      "main": [
+        [
+          {
+            "node": "Analyze Reviews (with retries)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Reviews (with retries)": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Process Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Summary": {
+      "main": [
+        [
+          {
+            "node": "Format Telegram Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Telegram Digest": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-11-03T17:00:00.000Z",
+  "versionId": "1"
+}
