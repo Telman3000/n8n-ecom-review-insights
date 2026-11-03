@@ -1,7 +1,6 @@
 """Pydantic schemas for API requests and responses."""
 
 from enum import Enum
-from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -34,7 +33,7 @@ class ReviewInput(BaseModel):
 class ReviewAnalysisRequest(BaseModel):
     """Request for analyzing multiple reviews."""
 
-    reviews: List[ReviewInput] = Field(..., min_length=1, description="List of reviews to analyze")
+    reviews: list[ReviewInput] = Field(..., min_length=1, description="List of reviews to analyze")
 
 
 class ReviewAnalysisResult(BaseModel):
@@ -42,10 +41,10 @@ class ReviewAnalysisResult(BaseModel):
 
     id: str = Field(..., description="Review identifier")
     sentiment: Sentiment = Field(..., description="Detected sentiment")
-    topics: List[str] = Field(
+    topics: list[str] = Field(
         default_factory=list, description="Extracted topics (e.g., доставка, качество)"
     )
-    complaints: List[str] = Field(
+    complaints: list[str] = Field(
         default_factory=list, description="Identified complaints or issues"
     )
     priority: Priority = Field(..., description="Priority level for addressing issues")
@@ -61,14 +60,14 @@ class BatchSummary(BaseModel):
     priority_distribution: dict[Priority, int] = Field(
         ..., description="Count of reviews per priority"
     )
-    top_topics: List[str] = Field(..., description="Most frequently mentioned topics")
-    top_complaints: List[str] = Field(..., description="Most frequent complaints")
+    top_topics: list[str] = Field(..., description="Most frequently mentioned topics")
+    top_complaints: list[str] = Field(..., description="Most frequent complaints")
 
 
 class AnalysisResponse(BaseModel):
     """Complete analysis response."""
 
-    results: List[ReviewAnalysisResult] = Field(..., description="Per-review analysis")
+    results: list[ReviewAnalysisResult] = Field(..., description="Per-review analysis")
     summary: BatchSummary = Field(..., description="Batch-level summary")
 
 

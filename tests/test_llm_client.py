@@ -42,13 +42,11 @@ async def test_llm_analyze_single_review(mock_openai_client):
         mock_settings.openai_api_key = "test-key"
         mock_settings.openai_base_url = "https://api.openai.com/v1"
         mock_settings.openai_model = "gpt-3.5-turbo"
-        
+
         with patch("service.analyzer_llm.AsyncOpenAI", return_value=mock_openai_client):
             analyzer = LLMAnalyzer()
 
-        review = ReviewInput(
-            id="test1", text="Отличный товар! Быстрая доставка.", rating=5
-        )
+        review = ReviewInput(id="test1", text="Отличный товар! Быстрая доставка.", rating=5)
 
         result = await analyzer.analyze(review)
 
@@ -76,7 +74,7 @@ async def test_llm_analyze_with_markdown_wrapped_json():
 ```"""
     mock_choice.message = mock_message
     mock_response.choices = [mock_choice]
-    
+
     mock_client = MagicMock()
     mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
@@ -84,10 +82,10 @@ async def test_llm_analyze_with_markdown_wrapped_json():
         mock_settings.openai_api_key = "test-key"
         mock_settings.openai_base_url = "https://api.openai.com/v1"
         mock_settings.openai_model = "gpt-3.5-turbo"
-        
+
         with patch("service.analyzer_llm.AsyncOpenAI", return_value=mock_client):
             analyzer = LLMAnalyzer()
-            
+
             review = ReviewInput(id="test2", text="Ужасное качество! Сломался.", rating=1)
 
             result = await analyzer.analyze(review)
@@ -104,7 +102,7 @@ async def test_llm_analyze_batch(mock_openai_client):
         mock_settings.openai_api_key = "test-key"
         mock_settings.openai_base_url = "https://api.openai.com/v1"
         mock_settings.openai_model = "gpt-3.5-turbo"
-        
+
         with patch("service.analyzer_llm.AsyncOpenAI", return_value=mock_openai_client):
             analyzer = LLMAnalyzer()
 
@@ -126,15 +124,13 @@ async def test_llm_analyze_batch(mock_openai_client):
 async def test_llm_analyze_batch_failure():
     """Test LLM batch analysis with failure."""
     mock_client = MagicMock()
-    mock_client.chat.completions.create = AsyncMock(
-        side_effect=Exception("API error")
-    )
+    mock_client.chat.completions.create = AsyncMock(side_effect=Exception("API error"))
 
     with patch("service.analyzer_llm.settings") as mock_settings:
         mock_settings.openai_api_key = "test-key"
         mock_settings.openai_base_url = "https://api.openai.com/v1"
         mock_settings.openai_model = "gpt-3.5-turbo"
-        
+
         with patch("service.analyzer_llm.AsyncOpenAI", return_value=mock_client):
             analyzer = LLMAnalyzer()
 

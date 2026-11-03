@@ -55,9 +55,7 @@ def test_review_input_missing_text():
 
 def test_review_analysis_request_valid():
     """Test valid ReviewAnalysisRequest."""
-    request = ReviewAnalysisRequest(
-        reviews=[ReviewInput(id="1", text="Test", rating=5)]
-    )
+    request = ReviewAnalysisRequest(reviews=[ReviewInput(id="1", text="Test", rating=5)])
     assert len(request.reviews) == 1
 
 
@@ -85,9 +83,7 @@ def test_review_analysis_result_valid():
 
 def test_review_analysis_result_default_lists():
     """Test ReviewAnalysisResult with default empty lists."""
-    result = ReviewAnalysisResult(
-        id="test1", sentiment=Sentiment.NEUTRAL, priority=Priority.LOW
-    )
+    result = ReviewAnalysisResult(id="test1", sentiment=Sentiment.NEUTRAL, priority=Priority.LOW)
     assert result.topics == []
     assert result.complaints == []
 
@@ -118,12 +114,8 @@ def test_batch_summary_valid():
 def test_analysis_response_valid():
     """Test valid AnalysisResponse."""
     results = [
-        ReviewAnalysisResult(
-            id="1", sentiment=Sentiment.POSITIVE, priority=Priority.LOW
-        ),
-        ReviewAnalysisResult(
-            id="2", sentiment=Sentiment.NEGATIVE, priority=Priority.HIGH
-        ),
+        ReviewAnalysisResult(id="1", sentiment=Sentiment.POSITIVE, priority=Priority.LOW),
+        ReviewAnalysisResult(id="2", sentiment=Sentiment.NEGATIVE, priority=Priority.HIGH),
     ]
     summary = BatchSummary(
         total_reviews=2,

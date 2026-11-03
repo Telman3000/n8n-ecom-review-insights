@@ -75,7 +75,7 @@ async def analyze_reviews(request: ReviewAnalysisRequest):
 
     except Exception as e:
         logger.error("Analysis failed: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}") from e
 
 
 if __name__ == "__main__":

@@ -2,7 +2,6 @@
 
 import json
 from collections import Counter
-from typing import List
 
 from openai import AsyncOpenAI
 
@@ -59,7 +58,7 @@ class LLMAnalyzer:
             "priority": Priority(analysis["priority"]),
         }
 
-    async def analyze_batch(self, reviews: List[ReviewInput]) -> tuple[List[dict], dict]:
+    async def analyze_batch(self, reviews: list[ReviewInput]) -> tuple[list[dict], dict]:
         """Analyze multiple reviews and generate summary."""
         results = []
         for review in reviews:
@@ -68,7 +67,7 @@ class LLMAnalyzer:
                 results.append(result)
             except Exception as e:
                 # If LLM fails for any review, raise to trigger fallback
-                raise RuntimeError(f"LLM analysis failed for review {review.id}: {e}")
+                raise RuntimeError(f"LLM analysis failed for review {review.id}: {e}") from e
 
         # Calculate summary statistics
         sentiments = [r["sentiment"] for r in results]

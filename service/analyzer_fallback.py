@@ -2,7 +2,6 @@
 
 import re
 from collections import Counter
-from typing import List
 
 from service.schemas import Priority, ReviewInput, Sentiment
 
@@ -79,12 +78,8 @@ class FallbackAnalyzer:
                 return Sentiment.NEUTRAL
 
         # Count positive and negative keywords
-        positive_count = sum(
-            1 for keyword in self.POSITIVE_KEYWORDS if keyword in text_lower
-        )
-        negative_count = sum(
-            1 for keyword in self.NEGATIVE_KEYWORDS if keyword in text_lower
-        )
+        positive_count = sum(1 for keyword in self.POSITIVE_KEYWORDS if keyword in text_lower)
+        negative_count = sum(1 for keyword in self.NEGATIVE_KEYWORDS if keyword in text_lower)
 
         if positive_count > negative_count:
             return Sentiment.POSITIVE
@@ -93,7 +88,7 @@ class FallbackAnalyzer:
         else:
             return Sentiment.NEUTRAL
 
-    def extract_topics(self, text: str) -> List[str]:
+    def extract_topics(self, text: str) -> list[str]:
         """Extract topics from review text."""
         text_lower = text.lower()
         found_topics = []
@@ -106,7 +101,7 @@ class FallbackAnalyzer:
 
         return found_topics
 
-    def extract_complaints(self, text: str) -> List[str]:
+    def extract_complaints(self, text: str) -> list[str]:
         """Extract complaint phrases from review text."""
         text_lower = text.lower()
         complaints = []
@@ -122,7 +117,7 @@ class FallbackAnalyzer:
 
         return complaints[:3]  # Limit to top 3 complaints
 
-    def determine_priority(self, sentiment: Sentiment, complaints: List[str]) -> Priority:
+    def determine_priority(self, sentiment: Sentiment, complaints: list[str]) -> Priority:
         """Determine priority based on sentiment and complaints."""
         if sentiment == Sentiment.NEGATIVE and len(complaints) >= 2:
             return Priority.CRITICAL
@@ -148,7 +143,7 @@ class FallbackAnalyzer:
             "priority": priority,
         }
 
-    def analyze_batch(self, reviews: List[ReviewInput]) -> tuple[List[dict], dict]:
+    def analyze_batch(self, reviews: list[ReviewInput]) -> tuple[list[dict], dict]:
         """Analyze multiple reviews and generate summary."""
         results = [self.analyze(review) for review in reviews]
 
