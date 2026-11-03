@@ -38,8 +38,13 @@ def mock_openai_client(mock_openai_response):
 @pytest.mark.asyncio
 async def test_llm_analyze_single_review(mock_openai_client):
     """Test LLM analysis of a single review."""
-    analyzer = LLMAnalyzer()
-    analyzer.client = mock_openai_client
+    with patch("service.analyzer_llm.settings") as mock_settings:
+        mock_settings.openai_api_key = "test-key"
+        mock_settings.openai_base_url = "https://api.openai.com/v1"
+        mock_settings.openai_model = "gpt-3.5-turbo"
+        
+        with patch("service.analyzer_llm.AsyncOpenAI", return_value=mock_openai_client):
+            analyzer = LLMAnalyzer()
 
     review = ReviewInput(
         id="test1", text="Отличный товар! Быстрая доставка.", rating=5
