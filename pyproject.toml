@@ -50,6 +50,7 @@ select = [
 ]
 ignore = [
     "E501",  # line too long, handled by formatter
+    "UP042", # StrEnum - marked as unsafe by ruff, keep str+Enum pattern for compatibility
 ]
 
 [tool.ruff.lint.per-file-ignores]
