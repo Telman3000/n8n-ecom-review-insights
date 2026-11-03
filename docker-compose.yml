@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  service:
+    build: .
+    container_name: review-analyzer-service
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - SERVICE_HOST=0.0.0.0
+      - SERVICE_PORT=8000
+    volumes:
+      - ./data:/app/data:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - review-network
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-automation
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-0.0.0.0}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Europe/Moscow
+      # Service connection
+      - SERVICE_URL=http://service:8000
+      # Telegram configuration (set these in .env)
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows:ro
+      - ./data:/data:ro
+    depends_on:
+      service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - review-network
+
+networks:
+  review-network:
+    driver: bridge
+
+volumes:
+  n8n_data:
+    driver: local
