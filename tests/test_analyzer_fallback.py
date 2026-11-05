@@ -3,7 +3,7 @@
 import pytest
 
 from service.analyzer_fallback import FallbackAnalyzer
-from service.schemas import Priority, ReviewInput, Sentiment
+from service.schemas import AnalysisMode, Priority, ReviewInput, Sentiment
 
 
 @pytest.fixture
@@ -125,6 +125,7 @@ def test_analyze_single_review(analyzer):
     assert isinstance(result["topics"], list)
     assert isinstance(result["complaints"], list)
     assert result["priority"] == Priority.LOW
+    assert result["mode"] == AnalysisMode.RULES
 
 
 def test_analyze_batch(analyzer):
@@ -141,5 +142,7 @@ def test_analyze_batch(analyzer):
     assert summary["total_reviews"] == 3
     assert "sentiment_distribution" in summary
     assert "priority_distribution" in summary
+    assert "mode_distribution" in summary
+    assert summary["mode_distribution"][AnalysisMode.RULES] == 3
     assert "top_topics" in summary
     assert "top_complaints" in summary

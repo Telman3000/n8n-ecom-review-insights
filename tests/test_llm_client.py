@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from service.analyzer_llm import LLMAnalyzer
-from service.schemas import Priority, ReviewInput, Sentiment
+from service.schemas import AnalysisMode, Priority, ReviewInput, Sentiment
 
 
 @pytest.fixture
@@ -54,6 +54,7 @@ async def test_llm_analyze_single_review(mock_openai_client):
         assert result["sentiment"] == Sentiment.POSITIVE
         assert "доставка" in result["topics"]
         assert result["priority"] == Priority.LOW
+        assert result["mode"] == AnalysisMode.LLM
         mock_openai_client.chat.completions.create.assert_called_once()
 
 
@@ -93,6 +94,7 @@ async def test_llm_analyze_with_markdown_wrapped_json():
             assert result["sentiment"] == Sentiment.NEGATIVE
             assert result["priority"] == Priority.CRITICAL
             assert len(result["complaints"]) == 2
+            assert result["mode"] == AnalysisMode.LLM
 
 
 @pytest.mark.asyncio
@@ -117,6 +119,8 @@ async def test_llm_analyze_batch(mock_openai_client):
             assert summary["total_reviews"] == 2
             assert "sentiment_distribution" in summary
             assert "priority_distribution" in summary
+            assert "mode_distribution" in summary
+            assert summary["mode_distribution"][AnalysisMode.LLM] == 2
             assert mock_openai_client.chat.completions.create.call_count == 2
 
 

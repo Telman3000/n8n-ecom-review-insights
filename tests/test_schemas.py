@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from service.schemas import (
+    AnalysisMode,
     AnalysisResponse,
     BatchSummary,
     Priority,
@@ -73,6 +74,7 @@ def test_review_analysis_result_valid():
         topics=["доставка", "качество"],
         complaints=["не пришла инструкция"],
         priority=Priority.MEDIUM,
+        mode=AnalysisMode.LLM,
     )
     assert result.id == "test1"
     assert result.sentiment == Sentiment.POSITIVE
@@ -83,7 +85,9 @@ def test_review_analysis_result_valid():
 
 def test_review_analysis_result_default_lists():
     """Test ReviewAnalysisResult with default empty lists."""
-    result = ReviewAnalysisResult(id="test1", sentiment=Sentiment.NEUTRAL, priority=Priority.LOW)
+    result = ReviewAnalysisResult(
+        id="test1", sentiment=Sentiment.NEUTRAL, priority=Priority.LOW, mode=AnalysisMode.RULES
+    )
     assert result.topics == []
     assert result.complaints == []
 
@@ -103,6 +107,10 @@ def test_batch_summary_valid():
             Priority.HIGH: 1,
             Priority.CRITICAL: 1,
         },
+        mode_distribution={
+            AnalysisMode.LLM: 7,
+            AnalysisMode.RULES: 3,
+        },
         top_topics=["доставка", "качество", "цена"],
         top_complaints=["не пришла инструкция"],
     )
@@ -114,13 +122,18 @@ def test_batch_summary_valid():
 def test_analysis_response_valid():
     """Test valid AnalysisResponse."""
     results = [
-        ReviewAnalysisResult(id="1", sentiment=Sentiment.POSITIVE, priority=Priority.LOW),
-        ReviewAnalysisResult(id="2", sentiment=Sentiment.NEGATIVE, priority=Priority.HIGH),
+        ReviewAnalysisResult(
+            id="1", sentiment=Sentiment.POSITIVE, priority=Priority.LOW, mode=AnalysisMode.LLM
+        ),
+        ReviewAnalysisResult(
+            id="2", sentiment=Sentiment.NEGATIVE, priority=Priority.HIGH, mode=AnalysisMode.RULES
+        ),
     ]
     summary = BatchSummary(
         total_reviews=2,
         sentiment_distribution={Sentiment.POSITIVE: 1, Sentiment.NEGATIVE: 1},
         priority_distribution={Priority.LOW: 1, Priority.HIGH: 1},
+        mode_distribution={AnalysisMode.LLM: 1, AnalysisMode.RULES: 1},
         top_topics=["доставка"],
         top_complaints=["сломался"],
     )

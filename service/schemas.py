@@ -22,6 +22,13 @@ class Priority(str, Enum):
     CRITICAL = "critical"
 
 
+class AnalysisMode(str, Enum):
+    """Analysis mode used."""
+
+    LLM = "llm"
+    RULES = "rules"
+
+
 class ReviewInput(BaseModel):
     """Single review input."""
 
@@ -48,6 +55,7 @@ class ReviewAnalysisResult(BaseModel):
         default_factory=list, description="Identified complaints or issues"
     )
     priority: Priority = Field(..., description="Priority level for addressing issues")
+    mode: AnalysisMode = Field(..., description="Analysis mode used (llm or rules)")
 
 
 class BatchSummary(BaseModel):
@@ -59,6 +67,9 @@ class BatchSummary(BaseModel):
     )
     priority_distribution: dict[Priority, int] = Field(
         ..., description="Count of reviews per priority"
+    )
+    mode_distribution: dict[AnalysisMode, int] = Field(
+        ..., description="Count of reviews per analysis mode"
     )
     top_topics: list[str] = Field(..., description="Most frequently mentioned topics")
     top_complaints: list[str] = Field(..., description="Most frequent complaints")

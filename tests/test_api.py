@@ -50,6 +50,7 @@ def test_analyze_endpoint_single_review(client):
     assert isinstance(result["topics"], list)
     assert isinstance(result["complaints"], list)
     assert result["priority"] in ["low", "medium", "high", "critical"]
+    assert result["mode"] in ["llm", "rules"]
 
 
 def test_analyze_endpoint_multiple_reviews(client):
@@ -72,6 +73,7 @@ def test_analyze_endpoint_multiple_reviews(client):
     assert summary["total_reviews"] == 3
     assert "sentiment_distribution" in summary
     assert "priority_distribution" in summary
+    assert "mode_distribution" in summary
     assert "top_topics" in summary
     assert "top_complaints" in summary
 

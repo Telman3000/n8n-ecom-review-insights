@@ -3,7 +3,7 @@
 import re
 from collections import Counter
 
-from service.schemas import Priority, ReviewInput, Sentiment
+from service.schemas import AnalysisMode, Priority, ReviewInput, Sentiment
 
 
 class FallbackAnalyzer:
@@ -141,6 +141,7 @@ class FallbackAnalyzer:
             "topics": topics,
             "complaints": complaints,
             "priority": priority,
+            "mode": AnalysisMode.RULES,
         }
 
     def analyze_batch(self, reviews: list[ReviewInput]) -> tuple[list[dict], dict]:
@@ -150,11 +151,13 @@ class FallbackAnalyzer:
         # Calculate summary statistics
         sentiments = [r["sentiment"] for r in results]
         priorities = [r["priority"] for r in results]
+        modes = [r["mode"] for r in results]
         all_topics = [topic for r in results for topic in r["topics"]]
         all_complaints = [complaint for r in results for complaint in r["complaints"]]
 
         sentiment_counts = Counter(sentiments)
         priority_counts = Counter(priorities)
+        mode_counts = Counter(modes)
         topic_counts = Counter(all_topics)
         complaint_counts = Counter(all_complaints)
 
@@ -162,6 +165,7 @@ class FallbackAnalyzer:
             "total_reviews": len(reviews),
             "sentiment_distribution": dict(sentiment_counts),
             "priority_distribution": dict(priority_counts),
+            "mode_distribution": dict(mode_counts),
             "top_topics": [topic for topic, _ in topic_counts.most_common(5)],
             "top_complaints": [complaint for complaint, _ in complaint_counts.most_common(5)],
         }
